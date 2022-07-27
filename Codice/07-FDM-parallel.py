@@ -161,7 +161,7 @@ if rank == 0:
 	else:
 		print(f"Convergence not reached despite {kmax} iterations", file=results)
 	dt = (t1-t0)
-	performance = dt / (k * N)
+	performance = dt / (k * N_local)
 	print(f"Elapsed time (main loop): {dt/1e9:.3f} s", file=results)
 	print(f"Time per iteration per unknown: {performance:.3f} ns", file=results)
 
