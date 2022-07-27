@@ -32,6 +32,10 @@ if argc > 3:
 	W = int(sys.argv[3])
 else:
 	W = 256
+if argc > 4:
+	filename = sys.argv[4]
+else:
+	filename = "results.txt"
 
 # Define problem -u_xx = f
 xL = 0
@@ -150,7 +154,7 @@ t1 = time.monotonic_ns();
 
 # Append results to file
 if rank == 0:
-	results = open("07-results.txt","a")
+	results = open(filename,"a")
 	print(f"Test with nprocesses = {nprocesses}, N_global = {N_global}, tol = {tol}, and W = {W}", file=results)
 	if has_converged:
 		print(f"Convergence reached after {k} iterations", file=results)

@@ -13,6 +13,10 @@ if argc > 2:
 	tol = float(sys.argv[2])
 else:
 	tol = 1e-12
+if argc > 3:
+	filename = sys.argv[3]
+else:
+	filename = "results.txt"
 
 # Define problem -u_xx + sigma(x)*u = f
 xL = 0
@@ -65,7 +69,7 @@ for k in range(0,kmax):
 t1 = time.monotonic_ns();
 
 # Append results to file
-results = open("06-results.txt","a")
+results = open(filename,"a")
 print(f"Test with N = {N} and tol = {tol}", file=results)
 if has_converged:
 	print(f"Convergence reached after {k} iterations", file=results)
