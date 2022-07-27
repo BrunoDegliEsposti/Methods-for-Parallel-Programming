@@ -18,15 +18,6 @@ if rank == nprocesses - 1:
 else:
 	rank_right = rank + 1
 
-# Define problem -u_xx = f
-xL = 0
-xR = 1
-sigma = lambda x: 1/(1+x*x)
-f = lambda x: (pi*pi + 1/(1+x*x)) * np.sin(pi*x)
-u_exact = lambda x: np.sin(pi*x)
-uL = u_exact(xL)
-uR = u_exact(xR)
-
 # Define parameters of the numerical method
 argc = len(sys.argv)
 if argc > 1:
@@ -41,6 +32,15 @@ if argc > 3:
 	W = int(sys.argv[3])
 else:
 	W = 256
+
+# Define problem -u_xx = f
+xL = 0
+xR = 1
+sigma = lambda x: 1/(1+x*x)
+f = lambda x: (pi*pi + 1/(1+x*x)) * np.sin(pi*x)
+u_exact = lambda x: np.sin(pi*x)
+uL = u_exact(xL)
+uR = u_exact(xR)
 
 # Discretize the domain [xL,xR]
 # N_global: total number of unknowns (without boundary)
@@ -115,6 +115,7 @@ def print_global(v_local):
 
 # Main loop of conjugate gradient algorithm
 has_converged = False
+comm.Barrier()
 t0 = time.monotonic_ns();
 kmax = 2*N_global
 for k in range(0,kmax):
@@ -144,6 +145,7 @@ for k in range(0,kmax):
 	alpha = rr_global / pv_global
 	u[0:] = u + alpha*p
 	r[0:] = r - alpha*v
+comm.Barrier()
 t1 = time.monotonic_ns();
 
 # Append results to file

@@ -1,13 +1,22 @@
-import os
+import os, time, sys
 os.environ['OMP_NUM_THREADS'] = '1'
-import time
 import numpy as np
 from numpy import pi
+
+# Define parameters of the numerical method
+argc = len(sys.argv)
+if argc > 1:
+	N = int(sys.argv[1])
+else:
+	N = 40000
+if argc > 2:
+	tol = float(sys.argv[2])
+else:
+	tol = 1e-12
 
 # Define problem -u_xx + sigma(x)*u = f
 xL = 0
 xR = 1
-N = 40000
 h = (xR-xL)/(N+1)
 sigma = lambda x: 1/(1+x*x)
 f = lambda x: (pi*pi + 1/(1+x*x)) * np.sin(pi*x)
@@ -33,7 +42,6 @@ v = np.zeros(p.shape)
 
 # Main loop of conjugate gradient algorithm
 kmax = 2*N
-tol = 1e-12
 has_converged = False
 t0 = time.monotonic_ns();
 for k in range(0,kmax):
@@ -55,16 +63,20 @@ for k in range(0,kmax):
 	u += alpha*p
 	r -= alpha*v
 t1 = time.monotonic_ns();
+
+# Append results to file
+results = open("06-results.txt","a")
+print(f"Test with N = {N} and tol = {tol}", file=results)
 if has_converged:
-	print(f"Convergence reached after {k} iterations")
+	print(f"Convergence reached after {k} iterations", file=results)
 else:
-	print(f"Convergence not reached despite {kmax} iterations")
+	print(f"Convergence not reached despite {kmax} iterations", file=results)
 dt = (t1-t0)
 performance = dt / (k * N)
-print(f"Elapsed time (main loop): {dt/1e9:.3f} s")
-print(f"Time per iteration per unknown: {performance:.3f} ns")
+print(f"Elapsed time (main loop): {dt/1e9:.3f} s", file=results)
+print(f"Time per iteration per unknown: {performance:.3f} ns", file=results)
 
 # Comparison with exact solution
 err = u - u_exact(x)
 err_Linf = np.max(np.abs(err))
-print(f"Error in Linf norm: {err_Linf:.4e}")
+print(f"Error in Linf norm: {err_Linf:.4e}", file=results)
