@@ -1,0 +1,48 @@
+Test with nprocesses = 1, N_global = 80000, tol = 1e-12, and W = 64
+Convergence reached after 79922 iterations
+Elapsed time (main loop): 149.270 s
+Time per iteration per unknown: 23.346 ns
+Error in Linf norm: 1.1867e-10
+
+Test with nprocesses = 1, N_global = 80000, tol = 1e-12, and W = 512
+Convergence reached after 79922 iterations
+Elapsed time (main loop): 150.657 s
+Time per iteration per unknown: 23.563 ns
+Error in Linf norm: 1.1867e-10
+
+Test with nprocesses = 2, N_global = 80000, tol = 1e-12, and W = 64
+Convergence reached after 79922 iterations
+Elapsed time (main loop): 103.719 s
+Time per iteration per unknown: 32.444 ns
+Error in Linf norm: 1.1868e-10
+
+Test with nprocesses = 2, N_global = 80000, tol = 1e-12, and W = 512
+Convergence reached after 79922 iterations
+Elapsed time (main loop): 109.203 s
+Time per iteration per unknown: 34.159 ns
+Error in Linf norm: 1.1868e-10
+
+Test with nprocesses = 4, N_global = 80000, tol = 1e-12, and W = 64
+Convergence reached after 79922 iterations
+Elapsed time (main loop): 69.960 s
+Time per iteration per unknown: 43.768 ns
+Error in Linf norm: 1.1867e-10
+
+Test with nprocesses = 4, N_global = 80000, tol = 1e-12, and W = 512
+Convergence reached after 79922 iterations
+Elapsed time (main loop): 73.699 s
+Time per iteration per unknown: 46.107 ns
+Error in Linf norm: 1.1867e-10
+
+Test with nprocesses = 8, N_global = 80000, tol = 1e-12, and W = 64
+Convergence reached after 79922 iterations
+Elapsed time (main loop): 55.225 s
+Time per iteration per unknown: 69.099 ns
+Error in Linf norm: 1.1867e-10
+
+Test with nprocesses = 8, N_global = 80000, tol = 1e-12, and W = 512
+Convergence reached after 79922 iterations
+Elapsed time (main loop): 55.598 s
+Time per iteration per unknown: 69.566 ns
+Error in Linf norm: 1.1867e-10
+

@@ -1,0 +1,60 @@
+Test with N = 5000 and tol = 1e-12
+Convergence reached after 4995 iterations
+Elapsed time (main loop): 0.634 s
+Time per iteration per unknown: 25.372 ns
+Error in Linf norm: 3.0433e-08
+
+Test with N = 10000 and tol = 1e-12
+Convergence reached after 9989 iterations
+Elapsed time (main loop): 2.007 s
+Time per iteration per unknown: 20.088 ns
+Error in Linf norm: 7.6098e-09
+
+Test with N = 20000 and tol = 1e-12
+Convergence reached after 19979 iterations
+Elapsed time (main loop): 6.874 s
+Time per iteration per unknown: 17.204 ns
+Error in Linf norm: 1.9026e-09
+
+Test with N = 40000 and tol = 1e-12
+Convergence reached after 39959 iterations
+Elapsed time (main loop): 24.463 s
+Time per iteration per unknown: 15.305 ns
+Error in Linf norm: 4.7570e-10
+
+Test with N = 80000 and tol = 1e-12
+Convergence reached after 79922 iterations
+Elapsed time (main loop): 91.212 s
+Time per iteration per unknown: 14.266 ns
+Error in Linf norm: 1.1867e-10
+
+Test with nprocesses = 1, N_global = 5000, tol = 1e-12, and W = 1
+Convergence reached after 4995 iterations
+Elapsed time (main loop): 0.924 s
+Time per iteration per unknown: 36.985 ns
+Error in Linf norm: 3.0433e-08
+
+Test with nprocesses = 1, N_global = 10000, tol = 1e-12, and W = 1
+Convergence reached after 9989 iterations
+Elapsed time (main loop): 2.680 s
+Time per iteration per unknown: 26.829 ns
+Error in Linf norm: 7.6098e-09
+
+Test with nprocesses = 1, N_global = 20000, tol = 1e-12, and W = 1
+Convergence reached after 19979 iterations
+Elapsed time (main loop): 8.801 s
+Time per iteration per unknown: 22.025 ns
+Error in Linf norm: 1.9026e-09
+
+Test with nprocesses = 1, N_global = 40000, tol = 1e-12, and W = 1
+Convergence reached after 39959 iterations
+Elapsed time (main loop): 39.832 s
+Time per iteration per unknown: 24.920 ns
+Error in Linf norm: 4.7570e-10
+
+Test with nprocesses = 1, N_global = 80000, tol = 1e-12, and W = 1
+Convergence reached after 79922 iterations
+Elapsed time (main loop): 151.113 s
+Time per iteration per unknown: 23.634 ns
+Error in Linf norm: 1.1867e-10
+
