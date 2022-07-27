@@ -79,4 +79,4 @@ print(f"Time per iteration per unknown: {performance:.3f} ns", file=results)
 # Comparison with exact solution
 err = u - u_exact(x)
 err_Linf = np.max(np.abs(err))
-print(f"Error in Linf norm: {err_Linf:.4e}", file=results)
+print(f"Error in Linf norm: {err_Linf:.4e}\n", file=results)
