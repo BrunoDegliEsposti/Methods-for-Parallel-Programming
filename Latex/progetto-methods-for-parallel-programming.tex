@@ -1,0 +1,377 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[italian]{babel}
+% LAYOUT
+\usepackage{geometry}
+	\geometry{a4paper,top=2cm,bottom=2cm,
+	left=2.5cm,right=2.5cm,heightrounded}
+\usepackage[backend=biber,style=numeric,hyperref]{biblatex}
+	\addbibresource{bibliografia.bib}
+\usepackage{booktabs,array}
+\usepackage{caption,subcaption}
+	\captionsetup{tableposition=top,figureposition=bottom}
+	\captionsetup{justification=centering,font=small,labelfont=bf}
+\usepackage{hyperref}
+	\hypersetup{hidelinks}
+\usepackage{microtype}
+% SCIENTIFIC TYPESETTING
+\usepackage{amsmath, amsthm, amssymb, mathtools}
+\usepackage{siunitx}
+\usepackage{resizegather}
+	\addtolength{\jot}{4pt}
+
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\abs}[1]{\left\lvert#1\right\rvert}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\deq}{\vcentcolon=}
+\newcommand{\eqd}{=\vcentcolon}
+\newcommand{\dx}{\, dx}
+\newcommand{\grad}{\nabla}
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\code}[1]{\begin{small}\texttt{#1}\end{small}}
+
+\DeclareMathOperator{\Ker}{Ker}
+\DeclareMathOperator{\Rank}{Rank}
+\DeclareMathOperator{\spn}{span} % \span è già utilizzato da latex
+\DeclareMathOperator{\diver}{div}
+\DeclareMathOperator{\supp}{supp}
+\DeclareMathOperator{\TV}{TV}
+\DeclareMathOperator{\tr}{tr}
+
+\title{\Huge{\bf{
+	Elaborato per il corso \\
+	\emph{Methods for Parallel Programming}
+}}}
+\author{\huge{Bruno Degli Esposti}}
+\date{\Large{Luglio/Agosto 2022}}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Questo elaborato descrive il processo di parallelizzazione
+tramite MPI di un algoritmo iterativo per la soluzione di
+sistemi lineari, il \emph{metodo del gradiente coniugato}.
+Tale algoritmo viene applicato alla soluzione di un
+boundary value problem monodimensionale tramite il metodo
+delle differenze finite. Il codice è stato scritto in Python
+e fa uso delle librerie \code{numpy} e \code{mpi4py}.
+Sono stati effettuati test sulle proprietà di strong scaling
+e weak scaling dell'algoritmo parallelo in esecuzione su
+un cluster MPI domestico composto da due computer portatili
+connessi tramite rete gigabit ethernet.
+\end{abstract}
+
+\section{Formulazione matematica del problema}
+\subsection*{Equazione di diffusione-reazione}
+Sia $u(x)$ una quantità fisica (ad esempio, la concentrazione
+di una specie chimica) definita in ogni punto di un dominio
+monodimensionale $\Omega = [x_L,x_R]$. Se al variare del tempo
+$u(x)$ è soggetta unicamente a processi di diffusione e di
+reazione, la configurazione di equilibrio per tempi grandi
+in presenza di un termine di sorgente/pozzo $f(x)$ è data
+dalla soluzione del seguente boundary value problem (BVP):
+\begin{equation} \label{eq:bvp}
+\begin{cases}
+-\mu(x) u''(x) + \sigma(x) u(x) = f(x)
+& \text{per ogni $x \in (x_L,x_R)$} \\
+u(x_L) = u_L \in \R \\
+u(x_R) = u_R \in \R
+\end{cases}
+\end{equation}
+Le condizioni al bordo $u(x_L) = u_L, u(x_R) = u_R$ sono dette
+\emph{condizioni di Dirichlet} e corrispondono all'ipotesi che
+la quantità $u(x)$ sia fissata agli estremi del dominio.
+La funzione $\mu(x)$ è detta \emph{diffusività} del mezzo $\Omega$
+ed è sempre strettamente positiva, quindi a meno di una divisione
+per $\mu(x)$ si può sempre supporre $\mu(x) \equiv 1$ senza perdita di generalità.
+La funzione $\sigma(x) \geq 0$ è detta \emph{tasso di reazione} e sotto
+opportune ipotesi di regolarità per $\sigma(x)$ e $f(x)$ si può dimostrare
+che il problema \eqref{eq:bvp} ha soluzione e che questa è unica.
+
+\subsection*{Metodo delle differenze finite}
+Il \emph{metodo delle differenze finite} è una delle possibili
+tecniche di discretizzazione esistenti in analisi numerica per
+trasformare un'equazione differenziale come la \eqref{eq:bvp}
+in un sistema di equazioni algebriche. In questo elaborato ho
+scelto di usare questo metodo per la sua semplicità sia
+concettuale che di implementazione. L'idea fondamentale del
+metodo delle differenze finite è quella di approssimare i valori
+puntuali di $u(x)$ in un numero finito di ascisse $x_i$ distribuite
+all'interno del dominio $\Omega$. Nel seguito indicheremo con
+$u(x_i)$ il valore della soluzione esatta in $x_i$ e con $u_i$
+la sua approssimazione numerica. Dunque le variabili $u_i$ saranno
+le incognite del sistema di equazioni algebriche ottenuto dalla
+discretizzazione di \eqref{eq:bvp}. Per semplicità, supponiamo
+che le ascisse $x_i$ siano equispaziate:
+\[
+x_i = x_L + ih, \quad h = \frac{x_R-x_L}{N+1}, \quad i = 0,\dots,N+1
+\]
+Abbiamo dunque $N$ ascisse interne al dominio (da $x_1$ a $x_N$)
+e due ascisse sul bordo del dominio ($x_0 = x_L$ e $x_{N+1} = x_R$).
+La quantità $h$ è detta \emph{passo di discretizzazione}.
+In ogni punto $x_i \in (x_L,x_R)$, la derivata seconda di $u$ si può
+approssimare tramite differenze finite:
+\begin{align} \label{eq:stencil}
+u''(x_i)
+&= \frac{u(x_i-h) - 2u(x_i) + u(x_i+h)}{h^2} + O(h^2) \\
+&= \frac{u(x_{i-1}) - 2u(x_i) + u(x_{i+1})}{h^2} + O(h^2)
+\end{align}
+La dimostrazione è immediata utilizzando la formula di Taylor
+per $u$ centrata in $x_i$. Dato che $u_i \approx u(x_i)$, la
+valutazione dell'equazione \eqref{eq:bvp} nelle ascisse $x_i$
+insieme alla formula \eqref{eq:stencil} suggeriscono lo
+schema numerico
+\begin{equation} \label{eq:fdm}
+\begin{cases}
+-(u_{i-1} - 2u_i + u_{i+1})h^{-2} + \sigma(x_i) u_i = f(x_i) \\
+u_0 = u_L \\
+u_{N+1} = u_R
+\end{cases}
+\end{equation}
+Questo non è altro che un sistema lineare nell'incognita
+vettoriale $u = (u_1,\dots,u_N)^T$. Siano
+\[
+A = \frac{1}{h^2}
+\begin{psmallmatrix}
+2 & -1 &   &   &   &   &   \\ 
+-1 & 2 & -1 &   &   &   &   \\ 
+  & -1 & 2 & -1 &   &   &   \\ \vspace*{0.5em}
+  &   & \ddots & \ddots & \ddots  &   &   \\
+  &   &   & -1 & 2 & -1 &   \\ 
+  &   &   &   & -1 & 2 & -1 \\ 
+  &   &   &   &   & -1 & 2
+\end{psmallmatrix}
++
+\begin{pmatrix}
+\sigma(x_1) &  &  \\ 
+  & \ddots &   \\ 
+  &   & \sigma(x_N)
+\end{pmatrix},
+\qquad
+b = \begin{pmatrix}
+f(x_1) + h^{-2} u_L \\ 
+f(x_2) \\ 
+\vdots \\ 
+f(x_{N-1}) \\ 
+f(x_N) + h^{-2} u_R
+\end{pmatrix}.
+\]
+Allora il metodo delle differenze finite consiste nella
+risoluzione del sistema lineare $Au = b$. Osserviamo che la matrice
+$A$ è simmetrica. Si può dimostrare che $A$ è anche definita positiva.
+Una volta risolto il sistema lineare, la qualità della soluzione
+ottenuta si può valutare confrontando i valori numerici $u_i$ con
+i valori esatti $u(x_i)$, supponendo di conoscere $u(x)$.
+Soluzioni esatte $u(x)$ possono essere costruite
+a tavolino assegnando funzioni arbitrarie a $u(x)$ e $\sigma(x)$
+e scegliendo $f(x)$ di conseguenza (\emph{method of manufactured solutions}). In tutti i test numerici ho scelto
+\begin{gather*}
+x_L = 0, \quad
+x_R = 1, \quad
+u_L = 0, \quad
+u_R = 0, \\
+u(x) = \sin(\pi x), \quad
+\sigma(x) = \frac{1}{1+x^2}, \quad
+f(x) = \left( \pi^2 + \frac{1}{1+x^2} \right) \sin(\pi x)
+\end{gather*}
+e ho stimato l'errore in norma infinito del metodo numerico tramite
+l'indicatore
+\[
+e_\infty = \max_{i=1,\dots,N} \left\{ \abs{u_i - u(x_i)} \right\}.
+\]
+La regolarità dei dati $\sigma$ e $f$ permette di dimostrare
+che il metodo delle differenze finite ha convergenza quadratica,
+vale a dire che $e_\infty = O(h^2)$.
+
+\subsection*{Metodo del gradiente coniugato}
+Nel paragrafo precedente ci siamo ricondotti alla soluzione
+di un sistema lineare $Au = b$, con $A$ matrice $N \times N$
+simmetrica definita positiva (SDP). Osserviamo che la matrice $A$
+è sparsa, ossia che possiede solo $O(N)$ termini non nulli
+anziché $O(N^2)$. Per matrici sparse esistono algoritmi
+ad hoc di tipo iterativo molto più efficienti in tempo
+e in spazio dei classici algoritmi basati sulle fattorizzazioni
+(come la fattorizzazione LU alla base dell'eliminazione gaussiana).
+Nel caso di matrice simmetrica definita positiva sparsa
+lo stato dell'arte è rappresentato dal \emph{metodo del
+gradiente coniugato}.
+
+Il metodo del gradiente coniugato, come molti altri metodi
+iterativi per matrici SPD, sfrutta l'equivalenza tra il
+problema della soluzione del sistema lineare
+\[
+Au = b
+\]
+e la minimizzazione della forma quadratica
+\[
+\Phi(u) = \frac{1}{2} u^T A u - b^T u + c
+\]
+con $c$ costante arbitraria. È infatti immediato verificare
+che $\grad \Phi(u) = 0$ se e solo se $u = A^{-1}b$.
+Il metodo del gradiente (semplice, non coniugato) è proprio
+l'analogo metodo di \emph{gradient descent} ben noto
+nell'ambito dell'ottimizzazione numerica, qui applicato alla
+forma quadratica $\Phi$.
+Osserviamo che $-\grad \Phi(u) = b-Au$, quindi il costo di
+ogni iterazione è a grandi linee il costo di un prodotto
+matrice-vettore, che grazie all'ipotesi di sparsità di $A$
+ha costo computazionale $O(N)$ anziché $O(N^2)$.
+Nell'ambito dei metodi iterativi per sistemi lineari,
+la quantità $b-Au$ è detta \emph{residuo}, viene indicata
+con $r$ ed è importante perché fornisce un'indicazione
+di quanto il vettore $u$ sia lontano dal risolvere il
+sistema lineare $Au = b$. Notiamo come in questo contesto
+antigradiente e residuo coincidano.
+
+Durante la prima iterazione, il metodo del gradiente
+coniugato si comporta esattamente come il metodo del
+gradiente semplice: la direzione di discesa $p_0$
+è uguale al residuo $r_0$, e la lunghezza del passo
+$\alpha_0 \in \R$ (nota come \emph{learing rate} nell'ambito del
+machine learning) è tale da minimizzare la funzione di line search
+\[
+\phi_0(\alpha) = \Phi(u_0 + \alpha r_0).
+\]
+Si può dimostrare che
+\[
+\alpha_0 = \frac{r_0^T r_0}{r_0^T A r_0},
+\]
+dopodiché i valori di $u_0$ e $r_0$ vengono aggiornati
+come segue:
+\[
+u_1 = u_0 + \alpha_0 p_0 = u_0 + \alpha_0 r_0, \quad
+r_1 = r_0 - \alpha_0 A p_0 = r_0 - \alpha_0 A r_0.
+\]
+Dalla seconda iterazione in poi, il metodo del gradiente
+coniugato inizia a comportarsi in modo diverso.
+La direzione di discesa $p_k$ non è più semplicemente
+l'antigradiente $r_k$, bensì
+\[
+p_k = r_k + \beta_k p_{k-1}
+\]
+con $\beta_k \in \R$ coefficiente introdotto affinché
+$p_k$ risulti una direzione $A$-coniugata con $p_{k-1}$, ossia
+\[
+p_k^T A p_{k-1} = 0.
+\]
+La lunghezza del passo $\alpha_k$ viene stabilita minimizzando
+la funzione di line search
+\[
+\phi_k(\alpha) = \Phi(u_k + \alpha p_k).
+\]
+Infine, i valori di $u_k$ e $r_k$ vengono aggiornati
+come segue:
+\[
+u_{k+1} = u_k + \alpha_k p_k, \quad
+r_{k+1} = r_k - \alpha_k A p_k.
+\]
+La condizione di arresto dell'algoritmo iterativo è che
+\[
+\norm{r_k}^2 \leq \delta^2 \norm{b}^2,
+\]
+con $\delta$ tolleranza relativa fissata a priori
+in base all'accuratezza desiderata sulla soluzione.
+
+La proprietà straordinaria del metodo del gradiente coniugato
+(dimostrabile per induzione) è che ogni coppia di residui
+distinti $r_k,r_j$ è ortogonale, e che ogni coppia di
+direzioni discesa distinte $p_k,p_j$ è $A$-coniugata.
+Dunque, se dopo $N$ iterazioni l'agoritmo non è già
+terminato, i residui $r_0,\dots,r_{N-1}$
+formeranno una base ortogonale di $\R^N$
+e a quel punto $r_N$ dev'essere necessariamente nullo
+per poter essere ortogonale a tutti i residui
+precedenti. Ma, se il residuo si annulla,
+questo significa che $A u_N = b$, cioè che $u_N$ risolve
+esattamente il sistema lineare. Dunque l'algoritmo del
+gradiente coniugato, pur essendo formulato come
+algoritmo iterativo, ha proprietà di terminazione finita
+dopo al più $N$ passi. Questo dimostra che il costo computazionale
+complessivo è nel caso pessimo $O(N^2)$ e l'occupazione di
+memoria $O(N)$.
+
+Riportiamo di seguito dello pseudocodice per l'algoritmo
+del gradiente coniugato, a cui faremo riferimento nelle
+sezioni successive di questo elaborato.
+Lo pseudocodice contiene le formule per il calcolo di
+$\alpha_k$ e $\beta	_k$ a ogni iterazione e riduce al minimo
+indispensabile (uno per iterazione) il numero di prodotti
+matrice-vettore attraverso l'introduzione del vettore ausiliario $v$.
+\begin{enumerate}
+\item Inizializza $u_0$ in modo arbitrario
+\item $k = 0, \quad r_0 = b - A u_0, \quad s_0 = \norm{r_0}^2,
+\quad \alpha_0 = s_0/(r_0^T A r_0), \quad p_0 = r_0$
+\item $u_1 = u_0 + \alpha_0 r_0, \quad r_1 = r_0 - \alpha_0 A r_0$
+\item $k = k + 1$
+\item $s_k = \norm{r_k}^2$
+\item Se $s_k \leq \delta^2 \norm{b}^2$,
+termina l'algoritmo con successo
+\item $\beta_k = s_k / s_{k-1}$
+\item $p_k = r_k + \beta_k p_{k-1}$
+\item $v_k = A p_k$
+\item $\alpha_k = s_k / (p_k^T v_k)$
+\item $x_{k+1} = x_k + \alpha_k p_k, \quad r_{k+1} = r_k - \alpha_k v_k$
+\item Ritorna al punto 4.
+\end{enumerate}
+
+\clearpage
+
+\section{Programmazione parallela}
+\subsection*{Message Passing Interface (MPI)}
+Foo
+
+
+
+
+
+
+
+
+
+
+
+
+\clearpage
+
+\subsection*{Parallelizzazione del metodo del gradiente coniugato}
+Bar
+% halo exchange
+
+\subsection*{Descrizione del cluster MPI domestico}
+Baz
+% halo exchange
+
+\section{Proprietà di scaling dell'algoritmo}
+\dots
+
+\printbibliography[heading=bibintoc, title={Bibliography}]
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
