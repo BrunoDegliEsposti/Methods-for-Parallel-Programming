@@ -106,7 +106,7 @@ def halo_exchange(v):
 	sendbuf = v[-2*W_right:-W_right]
 	recvbuf = v[0:W_left]
 	comm.Sendrecv(sendbuf, rank_right, recvbuf=recvbuf, source=rank_left)
-	# Right halo are refilled: data is sent to the left
+	# Right halos are refilled: data is sent to the left
 	sendbuf = v[W_left:2*W_left]
 	recvbuf = v[-W_right:]
 	comm.Sendrecv(sendbuf, rank_left, recvbuf=recvbuf, source=rank_right)
